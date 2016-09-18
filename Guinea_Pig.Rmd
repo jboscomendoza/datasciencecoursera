@@ -1,0 +1,74 @@
+---
+title: "Guinea Pig Tooth Growth Experiment"
+author: "Juan Bosco Mendoza Vega"
+date: "18 de septiembre de 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+## EXploratory statistics
+
+```{r}
+dim(ToothGrowth)
+summary(ToothGrowth)
+```
+
+
+Let's now see if the *len* column has a normal distribution with the Shapiro test. The null hypothesis for this test is that the given data **is normally distributed**.
+
+```{r, "lol"}
+shapiro.test(ToothGrowth$len)
+```
+
+Since we didn't get p-value less or equal to 0.05 that allows is to reject the null hypothesis, we can assume *len* is normally distributed.
+
+
+```{r}
+hist(ToothGrowth$len[ToothGrowth$supp == "OJ"])
+hist(ToothGrowth$len[ToothGrowth$supp == "VC"])
+
+tooth_split <- split(ToothGrowth, ToothGrowth$supp)
+
+boxplot(len ~ supp, ToothGrowth)
+
+t.test(
+    len ~ supp,
+    data = ToothGrowth,
+    var.equal = T, paired = F, alternative = "two.sided"
+       )
+
+boxplot(len ~ dose, ToothGrowth)
+
+tooth_new <- ToothGrowth
+
+tooth_new$dose <- as.factor(tooth_new$dose)
+
+tooth_split <-  split(tooth_new, tooth_new$dose)
+
+lapply(tooth_split, function(x) hist(x$len, main = names(x[1])))
+
+t.test(
+    tooth_split$`0.5`$len,
+    tooth_split$`1`$len,
+    var.equal = T, paired = F, alternative = "two.sided"
+)
+
+t.test(
+    tooth_split$`0.5`$len,
+    tooth_split$`2`$len,
+    var.equal = T, paired = F, alternative = "two.sided"
+)
+
+t.test(
+    tooth_split$`1`$len,
+    tooth_split$`2`$len,
+    var.equal = T, paired = F, alternative = "two.sided"
+)
+
+```
+
