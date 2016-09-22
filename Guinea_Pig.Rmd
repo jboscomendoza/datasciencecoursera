@@ -2,13 +2,15 @@
 title: "Guinea Pig Tooth Growth Experiment"
 author: "Juan Bosco Mendoza Vega"
 date: "September 18 2016"
-output: html_document
+output: 
+  pdf_document: 
+    fig_height: 3
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = F)
 knitr::opts_chunk$set(comment = "")
-knitr::opts_chunk$set(tidy = T)
+knitr::opts_chunk$set(strip.white = T)
 ```
 
 ```{r, message = F}
@@ -16,213 +18,67 @@ library(dplyr)
 library(car)
 ```
 
+# Summary
+
+We'll conduct a mean comparison of the effect of dose and supply method on theeth growth of guinea pigs. Means will be compared using t test 95% confidence interval and a significance level of 0.05.
+
 # Exploratory statistics
 
-First, we explore the structure of our data set. We'll use the **ToothGrowth**, included in *R*.
+Structure of the **ToothGrowth** data set.
 
 ```{r}
 str(ToothGrowth)
 ```
 
-We have three variables and 60 observations. According to the documentarion called by `?ToothGrowth`, our variables are:
+There are three variables and 60 observations. According to the documentarion called by `?ToothGrowth`, our variables are **len** (Tooth length, numeric); **supp** (Supplement type, factor with two levels. OJ: Orange Juice, VC: Ascorbic acid); and **dose** (Dose in miligrams per day, numeric). 
 
-* len: Tooth length (numeric)
-* supp: Supplement type (factor with two levels. OJ: Orange Juice, VC: Ascorbic acid)
-* dose: Dose in miligrams per day (numeric)
+There appear to be differences in Tooth growth by Supplement and Dose (Appendix A), but we need to test if it is statistically significant.
 
-From now on, we'll refer to the variables by their descriptive name.
+## Comparison of means
 
+### By Supplement type
 
-
-A brief summary of **ToothGrowth**.
-```{r}
-summary(ToothGrowth)
-```
-
-A look at the first five observations in the data set.
-
-```{r}
-head(ToothGrowth)
-```
-
-For this analysis, we assume the variable *Dose in miligrams* per day is grouping variable (a factor).
-
-
-## Normality of Tooth length
-
-Let's check if *Tooth length* is normally distributed, as this is a key assumption for our analysis. We'll use the ¨*Shapiro-Wilk Normality Test* for this task. The null hypothesis for this test is that the given data **is normally distributed**.
-
-```{r normality}
-shapiro.test(ToothGrowth$len)
-```
-
-We didn't obtain a p value less or equal to 0.05, so we can't reject the null hypothesis, then we assume *Tooth length* is normally distributed.
-
-To verify, we generate an histogram with an overlaid density curve of this variable.
-
-```{r histogram normal}
-hist(
-    ToothGrowth$len, 
-    probability = T, 
-    ylim = c(0, 0.05), 
-    main = "Histogram and Density of Tooth length",
-    xlab = "Tooth length",
-    col = "#FFFF66"
-    )
-lines(density(ToothGrowth$len))
-```
-
-We also generate a Normal Q-Q plot.
-
-```{r qqplot}
-qqnorm(
-    y = ToothGrowth$len, 
-    main = "Normal Q-Q Plot for Tooth length",
-    pch = 21,
-    bg = c("#FFFF66")
-)
-qqline(y = ToothGrowth$len)
-```
-
-While we don't have an excellent fit to a normal distribution, it's reasonably close to one.
-
-We'll proceed to test differences in the means of groups in this data set using **t tests**, as it is suitable for analysis with distributions both normal and not normal.
-
-## Median, mean and variance
-
-```{r boxplots}
-boxplot(
-    formula = len ~ supp, 
-    data = ToothGrowth, 
-    col = c("#FF6666", "#66BBFF"),
-    main = "Tooth length by Supplement type",
-    xlab = "Supplement type",
-    ylab = "Tooth length"
-)
-
-boxplot(
-    formula = len ~ dose, 
-    data = ToothGrowth, 
-    col = c("#FFFF66"),
-    main = "Tooth length by Dose in miligrams per day",
-    xlab = "Dose in miligrams per day",
-    ylab = "Tooth length"
-)
-
-boxplot(
-    formula = len ~ supp * dose, 
-    data = ToothGrowth, 
-    col = c("#FF6666", "#66BBFF"),
-    main = "Tooth length by Supplement type and Dose in miligrams per day",
-    xlab = "Supplement type and Dose in miligrams per day",
-    ylab = "Tooth length"
-
-)
-```
-
-## Test of homogenety of variance
-
-We proceed to test if the groups have equal variance using the Levene Test for homogenety of variance across groups.
-
-By *Supplement type*.
-
-```{r levene by supp}
-leveneTest(
-    len ~ supp,
-    data = ToothGrowth
-)
-```
-
-By *Dose in miligrams per day*.
-
-```{r levene by dose}
-leveneTest(
-    len ~ as.factor(dose),
-    data = ToothGrowth
-)
-```
-
-By *Supplement type* and *Dose in miligrams per day*.
-
-```{r levene by supp and dose}
-leveneTest(
-    len ~ supp * as.factor(dose),
-    data = ToothGrowth
-)
-```
-
-# Comparison of means
-
-## Comparison by Supplement type
-
-### Orange juice vs Ascorbic acid
-
+Orange juice vs Ascorbic acid
 ```{r t test supp}
-by_supp <- t.test(
+t.test(
     formula = len ~ supp,
     data = ToothGrowth,
     var.equal = F, 
     paired = F, 
     alternative = "two.sided"
 )
-
-by_supp
 ```
 
-* Is the p value less or equal to 0.05? **`r by_supp$p.value <= 0.05`**.
-* Does the confidence interval contain 0? **`r min(by_supp$conf.int) * max(by_supp$conf.int) <= 0`**.
+### By Dose in miligrams per day
 
-## Comparison by Dose in miligrams per day
-
-Tres comparaciones, así que haremos una corrección de Bonferroni.
-
-We set $\alpha$ 0.05 and we are conducting three different comparison. So, the value of $\alpha$ we'll use will be $\frac{0.05}{3}$, that is **`r 0.05 / 3`**
-
-```{r, include=F}
-bonferroni <- 0.05 / 3
-```
-
-### 0.5 miligram per day vs 1 miligram per day
-
+0.5 miligram per day vs 1 miligram per day
 ```{r .5 v 1}
 dose_0.5 <- ToothGrowth %>% filter(dose == 0.5) %>% select(len)
 dose_1   <- ToothGrowth %>% filter(dose == 1)   %>% select(len)
-by_dose_1 <- t.test(
+t.test(
     x = dose_0.5,
     y = dose_1,
     var.equal = F, 
     paired = F, 
     alternative = "less"
 )
-
-by_dose_1
 ```
 
-* Is the p value less or equal to the Bonferroni adjusted p value? **`r by_dose_1$p.value <= bonferroni`**.
-* Does the confidence interval contain 0? **`r min(by_dose_1$conf.int) * max(by_dose_1$conf.int) <= 0`**.
-
-### 0.5 miligram per day vs 2 miligram per day
-
+0.5 miligram per day vs 2 miligram per day
 ```{r .5 v 2}
 dose_0.5 <- ToothGrowth %>% filter(dose == 0.5) %>% select(len)
 dose_2   <- ToothGrowth %>% filter(dose == 2)   %>% select(len)
 
-by_dose_2 <- t.test(
+t.test(
     x = dose_0.5,
     y = dose_2,
     var.equal = T, 
     paired = F, 
     alternative = "less"
 )
-
-by_dose_2
 ```
 
-* Is the p value less or equal to the Bonferroni adjusted p value? **`r by_dose_2$p.value <= bonferroni`**.
-* Does the confidence interval contain 0? **`r min(by_dose_2$conf.int) * max(by_dose_2$conf.int) <= 0`**.
-
-### 1 miligram per day vs 2 miligram per day
-
+1 miligram per day vs 2 miligram per day
 ```{r 1 v 2}
 dose_1 <- ToothGrowth %>% filter(dose == 1) %>% select(len)
 dose_2 <- ToothGrowth %>% filter(dose == 2) %>% select(len)
@@ -237,81 +93,9 @@ by_dose_3 <- t.test(
 by_dose_3
 ```
 
-* Is the p value less or equal to the Bonferroni adjusted p value? **`r by_dose_3$p.value <= bonferroni`**.
-* Does the confidence interval contain 0? **`r min(by_dose_3$conf.int) * max(by_dose_3$conf.int) <= 0`**.
-
-## Difference by *supp* and *dose*
-
-Once again, three comparisons, so we use a Bonferroni correction.
-
-```{r}
-bonferroni <- 0.05 / 3
-```
-
-### Orange juice, 0.5 miligram per day vs Ascorbic acid, 0.5 miligram per day
-
-```{r}
-OJ_0.5 <- ToothGrowth %>% filter(supp == "OJ", dose == 0.5) %>% select(len)
-VC_0.5 <- ToothGrowth %>% filter(supp == "VC", dose == 0.5) %>% select(len)
-
-dose_supp_1 <- t.test(
-    x = OJ_0.5, 
-    y = VC_0.5,
-    paired = F, 
-    var.equal = F, 
-    alternative = "two.sided"
-)
-
-dose_supp_1
-```
-
-* Is the p value less or equal to the Bonferroni adjusted p value? **`r dose_supp_1$p.value <= bonferroni`**.
-* Does the confidence interval contain 0? **`r min(dose_supp_1$conf.int) * max(dose_supp_1$conf.int) <= 0`**.
-
-### Orange juice, 1 miligram per day vs Ascorbic acid, 1 miligram per day
-
-```{r}
-OJ_1 <- ToothGrowth %>% filter(supp == "OJ", dose == 1) %>% select(len)
-VC_1 <- ToothGrowth %>% filter(supp == "VC", dose == 1) %>% select(len)
-
-dose_supp_2 <- t.test(
-    x = OJ_1, 
-    y = VC_1,
-    paired = F, 
-    var.equal = F, 
-    alternative = "two.sided"
-)
-
-dose_supp_2
-```
-
-* Is the p value less or equal to the Bonferroni adjusted p value? **`r dose_supp_2$p.value <= bonferroni`**.
-* Does the confidence interval contain 0? **`r min(dose_supp_2$conf.int) * max(dose_supp_2$conf.int) <= 0`**.
-
-
-### Orange juice, 2 miligrams per day vs Ascorbic acid, 2 miligrams per day
-
-```{r}
-OJ_2 <- ToothGrowth %>% filter(supp == "OJ", dose == 2) %>% select(len)
-VC_2 <- ToothGrowth %>% filter(supp == "VC", dose == 2) %>% select(len)
-
-dose_supp_3 <- t.test(
-    x = OJ_2, 
-    y = VC_2,
-    paired = F, 
-    var.equal = F, 
-    alternative = "two.sided"
-)
-
-dose_supp_3
-```
-
-* Is the p value less or equal to the Bonferroni adjusted p value? **`r dose_supp_3$p.value <= bonferroni`**.
-* Does the confidence interval contain 0? **`r min(dose_supp_3$conf.int) * max(dose_supp_3$conf.int) <= 0`**.
-
 ## Conclusion
 
-There's a diference in tooth growth by
+There's a diference in tooth growth by 
 
 There's no difference by supp.
 
@@ -320,3 +104,61 @@ There's a difference by dose. Lower doses correspond to lower growth.
 No difference by supp at a dose equal to 2.
 
 # Appendix
+
+## A. Visualization of the groups
+
+```{r boxplots, fig.align='left'}
+par(mfrow = c(1, 2))
+boxplot(
+    formula = len ~ supp, 
+    data = ToothGrowth, 
+    col = c("#FF6666", "#66BBFF"),
+    xlab = "Supplement type",
+    ylab = "Tooth length"
+)
+
+boxplot(
+    formula = len ~ dose, 
+    data = ToothGrowth, 
+    col = c("#FFFF66"),
+    xlab = "Dose in miligrams per day",
+    ylab = "Tooth length"
+)
+```
+
+## B. Summary of ToothGrowth
+```{r}
+summary(ToothGrowth)
+```
+
+## C. Test of normality of Tooth length
+The ¨*Shapiro-Wilk Normality Test* is used, The null hypothesis for this test is that the given data is normally distributed. Results indicate we can't reject this hypotesis, so **we assume the distribution is normal**.
+```{r normality, echo = T}
+shapiro.test(ToothGrowth$len)
+```
+
+A histogram with an overlaid density curve of this variable and a Normal Q-Q plot are generated to support the assumtion its distribution is normal.
+```{r histogram qqplot, echo = T}
+par(mfrow = c(1, 2))
+hist(ToothGrowth$len, probability = T, ylim = c(0, 0.05), 
+    main = "Histogram and Density\n of Tooth length",
+    xlab = "Tooth length",
+    col = "#FFFF66"
+    )
+lines(density(ToothGrowth$len))
+
+qqnorm(y = ToothGrowth$len, 
+    main = "Normal Q-Q Plot\n for Tooth length",
+    pch = 21, bg = c("#FFFF66"))
+qqline(y = ToothGrowth$len)
+```
+
+## D. Test if variance is equal across groups
+The *Levene's test of homogenity of variance is used*. Groups are: *Supplement type*; *Dose in miligrams per day*; and *Supplement type* and *Dose in miligrams per day*. Results indicate groups **don't have equal variance**.
+
+```{r levene by supp, echo = T}
+library(car)
+leveneTest(len ~ supp, data = ToothGrowth)
+leveneTest(len ~ as.factor(dose), data = ToothGrowth)
+leveneTest(len ~ supp * as.factor(dose), data = ToothGrowth)
+```
