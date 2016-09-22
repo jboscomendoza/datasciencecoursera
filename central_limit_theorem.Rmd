@@ -1,0 +1,146 @@
+---
+title: "Comparison of a simulated sample distribution. Testing the central limit theorem"
+author: "Juan Bosco Mendoza Vega"
+date: "22 de septiembre de 2016"
+output: 
+  html_document: 
+    fig_height: 3.5
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T)
+knitr::opts_chunk$set(comment = "")
+knitr::opts_chunk$set(strip.white = T)
+```
+
+## Overview
+
+A sample distribution of one thousand simulated exponential distributions with forty elements each will be generated. The Sample mean and variance will be compared to the Theoretical mean and Variance of this distribution. The sample distribution will be then compared to an exponential distribution and a normal distribution.
+
+## Simulation
+
+One thousand sets of exponential distributions each containing forty elements are generated using `rexp`. For this simulations, $\lambda = 0.2$ is set and this value is assigned to the `lambda_exp` object for further use. A `NULL` object names `sample_dist` is created, it will store the means of the simulated distributions.
+
+For each of the one thousand simulated exponential distributions, we compute their mean, and store append it to the `sample_dist` object. This will result in a vector containing the **sample distribution**. `set.seed` is set to `1337` to improve the reproductibility of the tests.
+
+```{r}
+lambda_exp  <- 0.2
+sample_dist <- NULL
+set.seed(1337)
+for (i in 1:1000) {
+    sample_dist <-  c(sample_dist, mean(rexp(n = 40, rate = lambda_exp)))
+}
+```
+
+## Comparing the Sample Mean to the Theoretical Mean
+
+The theoretical mean of an exponential distribution is equal to $\frac{1}{\lambda}$. In this case, $\lambda = 0.2$, so the theoretical mean is 5:
+
+```{r}
+1 / lambda_exp
+```
+
+This is roughly equal to the sample mean:
+```{r}
+mean(sample_dist)
+```
+
+We can see and see how the sample mean and theoretical mean are located roughly at the same place, at the center of the sample distribution.
+
+```{r, echo = F}
+hist(sample_dist, main = "Comparison of sample mean and theoretical mean")
+abline(v = 5, col = "#FF6666", lty = 1, lwd = 2)
+abline(v = mean(sample_dist), col = "#6666FF", lty = 2, lwd = 2)
+legend('topright', 
+       c("Sample mean", "Theoretical mean"), 
+       lty = c(1,2), col = c("#FF6666", "#6666FF"), 
+       bty='y', cex=.75)
+```
+
+We conclude the sample mean an theoretical mean are aproximately the same.
+
+## Comparing the Sample Variance to the Theoretical Variance
+
+Theoretical variance is equal to $\frac{(\frac{1}{\lambda^2})}{n}$:
+
+```{r}
+(1 / lambda_exp)^2/40
+```
+
+Sample variance is equal to:
+
+```{r}
+var(sample_dist)
+```
+The sample variance and the theoretical variance are aproximately the same. The differences observed can be attributed to the size of the sample. If the number of elements for each distribution we simulated woukld be increased, the sample variance would be close to the theoretical value.
+
+## Comparing the sample distribution to a normal distribution
+A comparison of the sample distribution (red) to a exponential distribution with 1000 elements and $\lambda = 5$ (blue) and a normal distribution with mean 5 (green) is shown.
+
+```{r, echo = F}
+set.seed(1337)
+
+hist(sample_dist, probability = T, xlim = c(0, 10),
+     main = "Comparison of sample, exponential and normal distributions")
+lines(density(sample_dist), 
+      col = "#FF6666", lwd = 2)
+lines(density(rexp(1000, rate = .2)), 
+      col = "#66BBFF", lwd = 2)
+lines(density(rnorm(1000, mean = 1/lambda_exp)), 
+      col = "#66BB66", lwd = 2)
+legend('topright', 
+       c("Sample distribution", "Exponential distribution", "Normal distribution"), 
+       lty = 1, col = c("#FF6666", "#6666FF", "#66BB66"), 
+       bty='y', cex=.75)
+```
+
+It can be observed that the sample distribution is considerable different to a exponential difference, but close to a normal distribution. Both are centered at the same location and their spread is very similar.
+
+The following Q-Q normal plot confirms this:
+```{r, echo = F}
+qqnorm(sample_dist, main = "Normal Q_Q Plot for sample distribution", 
+       col = "#FF6666")
+qqline(sample_dist)
+```
+
+
+We conclude the sample distribution is normally distributed.
+
+## Conclusion
+
+The Theoretical mean and Sample mean of the sample distribution we simulated are approximately equal; the same is true for its Theoretical variance and Sample variance. The sample distribution we simulated is aproximately normally distributed and it is considerably different to an exponential distribution. This is consistent with the behavior predicted by the *Central Limit Theorem*.
+
+
+# Appendix
+
+## A. Code for plots
+
+```{r, echo = T, eval = F}
+hist(sample_dist, main = "Theoretical Mean")
+abline(v = 5, col = "#FF6666", lty = 1, lwd = 2)
+abline(v = mean(sample_dist), col = "#6666FF", lty = 2, lwd = 2)
+legend('topright', 
+       c("Theoretical mean", "Sample mean"), 
+       lty = c(1,2), col = c("#FF6666", "#6666FF"), 
+       bty='y', cex=.75)
+
+set.seed(1337)
+
+hist(sample_dist, probability = T, xlim = c(0, 10),
+     main = "Comparison of sample, exponential and normal distributions")
+lines(density(sample_dist), 
+      col = "#FF6666", lwd = 2)
+lines(density(rexp(1000, rate = .2)), 
+      col = "#66BBFF", lwd = 2)
+lines(density(rnorm(1000, mean = 1/lambda_exp)), 
+      col = "#66BB66", lwd = 2)
+legend('topright', 
+       c("Sample distribution", "Exponential distribution", "Normal distribution"), 
+       lty = 1, col = c("#FF6666", "#6666FF", "#66BB66"), 
+       bty='y', cex=.75)
+
+qqnorm(sample_dist, main = "Normal Q_Q Plot for sample distribution", 
+       col = "#FF6666")
+qqline(sample_dist)
+```
+
