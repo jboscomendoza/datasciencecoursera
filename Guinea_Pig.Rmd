@@ -18,27 +18,31 @@ library(dplyr)
 library(car)
 ```
 
-# Summary
+## Overview
 
-We'll conduct a mean comparison of the effect of dose and supply method on theeth growth of guinea pigs. Means will be compared using t test 95% confidence interval and a significance level of 0.05.
+The effect of Supplement type and Dose of supplement in the tooth growth of guinea pigs will be tested A brief summary of the data will be presented and means of the tooth growth of guinea pigs with different Supplement type and different Dose of supplement will be compared using confidence intervals and significance levels produced by t tests.
 
-# Exploratory statistics
+## Exploratory statistics
 
-Structure of the **ToothGrowth** data set.
+There are three variables and 60 observations. According to the summary and documentation called by `?ToothGrowth`, the variables are *Tooth length* (len, numeric); *Supplement type* (supp, factor with two levels. OJ: Orange Juice, VC: Ascorbic acid); and *Dose* in miligrams per day (dose, numeric) (Appendix X).
 
-```{r}
-str(ToothGrowth)
-```
+At a aglance there seems to be differences in *Tooth growth* by *Supplement*, and *Tooth growth* seems to increase as *Dose* increases (Appendix X).
 
-There are three variables and 60 observations. According to the documentarion called by `?ToothGrowth`, our variables are **len** (Tooth length, numeric); **supp** (Supplement type, factor with two levels. OJ: Orange Juice, VC: Ascorbic acid); and **dose** (Dose in miligrams per day, numeric). 
+## Assumptions
 
-There appear to be differences in Tooth growth by Supplement and Dose (Appendix A), but we need to test if it is statistically significant.
+After conducting a *Shapiro-Wilks test* (Appendix X) and visually exploring *Tooth length* (Appendix X), this variable seems to be **normally distributed**.
 
-## Comparison of means
+After a conducting a *Levene's test* for homogeneity of variance (Appendix X), there's evidence that the groups to compare **don't have equal variance**.
 
-### By Supplement type
+There's no evidence that the observations are paired, so it's assumed they are *independent  groups*.
 
-Orange juice vs Ascorbic acid
+## Choice of test
+
+Consideting our assumptions, a *t test* for non paired groups and inequal variance will be conducted.
+
+## Comparison by Supplement type
+
+**Orange juice vs Ascorbic acid**
 ```{r t test supp}
 t.test(
     formula = len ~ supp,
@@ -48,10 +52,11 @@ t.test(
     alternative = "two.sided"
 )
 ```
+The 95% confidence interval contains 0 and the significance level is not less or equal to 0.05. There are no differences in the Tooth Growth mean by *Supplement*.
 
-### By Dose in miligrams per day
+## Comparison by Dose
 
-0.5 miligram per day vs 1 miligram per day
+**0.5 miligrams per day vs 1 miligram per day**
 ```{r .5 v 1}
 dose_0.5 <- ToothGrowth %>% filter(dose == 0.5) %>% select(len)
 dose_1   <- ToothGrowth %>% filter(dose == 1)   %>% select(len)
@@ -63,8 +68,9 @@ t.test(
     alternative = "less"
 )
 ```
+The 95% confidence interval is entirely below 0 and the significance level is less than 0.05. A dose of 0.5 miligrams has a lower Tooth growth mean than a dose of 1 miligram.
 
-0.5 miligram per day vs 2 miligram per day
+**0.5 miligram per day vs 2 miligram per day**
 ```{r .5 v 2}
 dose_0.5 <- ToothGrowth %>% filter(dose == 0.5) %>% select(len)
 dose_2   <- ToothGrowth %>% filter(dose == 2)   %>% select(len)
@@ -72,26 +78,27 @@ dose_2   <- ToothGrowth %>% filter(dose == 2)   %>% select(len)
 t.test(
     x = dose_0.5,
     y = dose_2,
-    var.equal = T, 
+    var.equal = F, 
     paired = F, 
     alternative = "less"
 )
 ```
+The 95% confidence interval is entirely below 0 and the significance level is less than 0.05. A dose of 0.5 miligrams has a lower Tooth growth mean than a dose of 2 miligrams.
 
-1 miligram per day vs 2 miligram per day
+
+**1 miligram per day vs 2 miligram per day**
 ```{r 1 v 2}
 dose_1 <- ToothGrowth %>% filter(dose == 1) %>% select(len)
 dose_2 <- ToothGrowth %>% filter(dose == 2) %>% select(len)
-by_dose_3 <- t.test(
+t.test(
     x = dose_1,
     y = dose_2,
     var.equal = F, 
     paired = F, 
     alternative = "less"
 )
-
-by_dose_3
 ```
+The 95% confidence interval is entirely below 0 and the significance level is less than 0.05. A dose of 1 miligram has a lower Tooth growth mean than a dose of 2 miligrams.
 
 ## Conclusion
 
@@ -104,6 +111,13 @@ There's a difference by dose. Lower doses correspond to lower growth.
 No difference by supp at a dose equal to 2.
 
 # Appendix
+
+## Structure of the **ToothGrowth** data set.
+
+```{r}
+str(ToothGrowth)
+summary(ToothGrowth)
+```
 
 ## A. Visualization of the groups
 
@@ -124,11 +138,6 @@ boxplot(
     xlab = "Dose in miligrams per day",
     ylab = "Tooth length"
 )
-```
-
-## B. Summary of ToothGrowth
-```{r}
-summary(ToothGrowth)
 ```
 
 ## C. Test of normality of Tooth length
