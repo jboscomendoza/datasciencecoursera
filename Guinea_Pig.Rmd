@@ -1,74 +1,322 @@
 ---
 title: "Guinea Pig Tooth Growth Experiment"
 author: "Juan Bosco Mendoza Vega"
-date: "18 de septiembre de 2016"
-output: pdf_document
+date: "September 18 2016"
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(comment = "")
+knitr::opts_chunk$set(tidy = T)
 ```
 
-## R Markdown
+```{r, message = F}
+library(dplyr)
+library(car)
+```
 
-## EXploratory statistics
+# Exploratory statistics
+
+First, we explore the structure of our data set. We'll use the **ToothGrowth**, included in *R*.
 
 ```{r}
-dim(ToothGrowth)
+str(ToothGrowth)
+```
+
+We have three variables and 60 observations. According to the documentarion called by `?ToothGrowth`, our variables are:
+
+* len: Tooth length (numeric)
+* supp: Supplement type (factor with two levels. OJ: Orange Juice, VC: Ascorbic acid)
+* dose: Dose in miligrams per day (numeric)
+
+From now on, we'll refer to the variables by their descriptive name.
+
+
+
+A brief summary of **ToothGrowth**.
+```{r}
 summary(ToothGrowth)
 ```
 
+A look at the first five observations in the data set.
 
-Let's now see if the *len* column has a normal distribution with the Shapiro test. The null hypothesis for this test is that the given data **is normally distributed**.
+```{r}
+head(ToothGrowth)
+```
 
-```{r, "lol"}
+For this analysis, we assume the variable *Dose in miligrams* per day is grouping variable (a factor).
+
+
+## Normality of Tooth length
+
+Let's check if *Tooth length* is normally distributed, as this is a key assumption for our analysis. We'll use the ¨*Shapiro-Wilk Normality Test* for this task. The null hypothesis for this test is that the given data **is normally distributed**.
+
+```{r normality}
 shapiro.test(ToothGrowth$len)
 ```
 
-Since we didn't get p-value less or equal to 0.05 that allows is to reject the null hypothesis, we can assume *len* is normally distributed.
+We didn't obtain a p value less or equal to 0.05, so we can't reject the null hypothesis, then we assume *Tooth length* is normally distributed.
 
+To verify, we generate an histogram with an overlaid density curve of this variable.
 
-```{r}
-hist(ToothGrowth$len[ToothGrowth$supp == "OJ"])
-hist(ToothGrowth$len[ToothGrowth$supp == "VC"])
-
-tooth_split <- split(ToothGrowth, ToothGrowth$supp)
-
-boxplot(len ~ supp, ToothGrowth)
-
-t.test(
-    len ~ supp,
-    data = ToothGrowth,
-    var.equal = T, paired = F, alternative = "two.sided"
-       )
-
-boxplot(len ~ dose, ToothGrowth)
-
-tooth_new <- ToothGrowth
-
-tooth_new$dose <- as.factor(tooth_new$dose)
-
-tooth_split <-  split(tooth_new, tooth_new$dose)
-
-lapply(tooth_split, function(x) hist(x$len, main = names(x[1])))
-
-t.test(
-    tooth_split$`0.5`$len,
-    tooth_split$`1`$len,
-    var.equal = T, paired = F, alternative = "two.sided"
-)
-
-t.test(
-    tooth_split$`0.5`$len,
-    tooth_split$`2`$len,
-    var.equal = T, paired = F, alternative = "two.sided"
-)
-
-t.test(
-    tooth_split$`1`$len,
-    tooth_split$`2`$len,
-    var.equal = T, paired = F, alternative = "two.sided"
-)
-
+```{r histogram normal}
+hist(
+    ToothGrowth$len, 
+    probability = T, 
+    ylim = c(0, 0.05), 
+    main = "Histogram and Density of Tooth length",
+    xlab = "Tooth length",
+    col = "#FFFF66"
+    )
+lines(density(ToothGrowth$len))
 ```
 
+We also generate a Normal Q-Q plot.
+
+```{r qqplot}
+qqnorm(
+    y = ToothGrowth$len, 
+    main = "Normal Q-Q Plot for Tooth length",
+    pch = 21,
+    bg = c("#FFFF66")
+)
+qqline(y = ToothGrowth$len)
+```
+
+While we don't have an excellent fit to a normal distribution, it's reasonably close to one.
+
+We'll proceed to test differences in the means of groups in this data set using **t tests**, as it is suitable for analysis with distributions both normal and not normal.
+
+## Median, mean and variance
+
+```{r boxplots}
+boxplot(
+    formula = len ~ supp, 
+    data = ToothGrowth, 
+    col = c("#FF6666", "#66BBFF"),
+    main = "Tooth length by Supplement type",
+    xlab = "Supplement type",
+    ylab = "Tooth length"
+)
+
+boxplot(
+    formula = len ~ dose, 
+    data = ToothGrowth, 
+    col = c("#FFFF66"),
+    main = "Tooth length by Dose in miligrams per day",
+    xlab = "Dose in miligrams per day",
+    ylab = "Tooth length"
+)
+
+boxplot(
+    formula = len ~ supp * dose, 
+    data = ToothGrowth, 
+    col = c("#FF6666", "#66BBFF"),
+    main = "Tooth length by Supplement type and Dose in miligrams per day",
+    xlab = "Supplement type and Dose in miligrams per day",
+    ylab = "Tooth length"
+
+)
+```
+
+## Test of homogenety of variance
+
+We proceed to test if the groups have equal variance using the Levene Test for homogenety of variance across groups.
+
+By *Supplement type*.
+
+```{r levene by supp}
+leveneTest(
+    len ~ supp,
+    data = ToothGrowth
+)
+```
+
+By *Dose in miligrams per day*.
+
+```{r levene by dose}
+leveneTest(
+    len ~ as.factor(dose),
+    data = ToothGrowth
+)
+```
+
+By *Supplement type* and *Dose in miligrams per day*.
+
+```{r levene by supp and dose}
+leveneTest(
+    len ~ supp * as.factor(dose),
+    data = ToothGrowth
+)
+```
+
+# Comparison of means
+
+## Comparison by Supplement type
+
+### Orange juice vs Ascorbic acid
+
+```{r t test supp}
+by_supp <- t.test(
+    formula = len ~ supp,
+    data = ToothGrowth,
+    var.equal = F, 
+    paired = F, 
+    alternative = "two.sided"
+)
+
+by_supp
+```
+
+* Is the p value less or equal to 0.05? **`r by_supp$p.value <= 0.05`**.
+* Does the confidence interval contain 0? **`r min(by_supp$conf.int) * max(by_supp$conf.int) <= 0`**.
+
+## Comparison by Dose in miligrams per day
+
+Tres comparaciones, así que haremos una corrección de Bonferroni.
+
+We set $\alpha$ 0.05 and we are conducting three different comparison. So, the value of $\alpha$ we'll use will be $\frac{0.05}{3}$, that is **`r 0.05 / 3`**
+
+```{r, include=F}
+bonferroni <- 0.05 / 3
+```
+
+### 0.5 miligram per day vs 1 miligram per day
+
+```{r .5 v 1}
+dose_0.5 <- ToothGrowth %>% filter(dose == 0.5) %>% select(len)
+dose_1   <- ToothGrowth %>% filter(dose == 1)   %>% select(len)
+by_dose_1 <- t.test(
+    x = dose_0.5,
+    y = dose_1,
+    var.equal = F, 
+    paired = F, 
+    alternative = "less"
+)
+
+by_dose_1
+```
+
+* Is the p value less or equal to the Bonferroni adjusted p value? **`r by_dose_1$p.value <= bonferroni`**.
+* Does the confidence interval contain 0? **`r min(by_dose_1$conf.int) * max(by_dose_1$conf.int) <= 0`**.
+
+### 0.5 miligram per day vs 2 miligram per day
+
+```{r .5 v 2}
+dose_0.5 <- ToothGrowth %>% filter(dose == 0.5) %>% select(len)
+dose_2   <- ToothGrowth %>% filter(dose == 2)   %>% select(len)
+
+by_dose_2 <- t.test(
+    x = dose_0.5,
+    y = dose_2,
+    var.equal = T, 
+    paired = F, 
+    alternative = "less"
+)
+
+by_dose_2
+```
+
+* Is the p value less or equal to the Bonferroni adjusted p value? **`r by_dose_2$p.value <= bonferroni`**.
+* Does the confidence interval contain 0? **`r min(by_dose_2$conf.int) * max(by_dose_2$conf.int) <= 0`**.
+
+### 1 miligram per day vs 2 miligram per day
+
+```{r 1 v 2}
+dose_1 <- ToothGrowth %>% filter(dose == 1) %>% select(len)
+dose_2 <- ToothGrowth %>% filter(dose == 2) %>% select(len)
+by_dose_3 <- t.test(
+    x = dose_1,
+    y = dose_2,
+    var.equal = F, 
+    paired = F, 
+    alternative = "less"
+)
+
+by_dose_3
+```
+
+* Is the p value less or equal to the Bonferroni adjusted p value? **`r by_dose_3$p.value <= bonferroni`**.
+* Does the confidence interval contain 0? **`r min(by_dose_3$conf.int) * max(by_dose_3$conf.int) <= 0`**.
+
+## Difference by *supp* and *dose*
+
+Once again, three comparisons, so we use a Bonferroni correction.
+
+```{r}
+bonferroni <- 0.05 / 3
+```
+
+### Orange juice, 0.5 miligram per day vs Ascorbic acid, 0.5 miligram per day
+
+```{r}
+OJ_0.5 <- ToothGrowth %>% filter(supp == "OJ", dose == 0.5) %>% select(len)
+VC_0.5 <- ToothGrowth %>% filter(supp == "VC", dose == 0.5) %>% select(len)
+
+dose_supp_1 <- t.test(
+    x = OJ_0.5, 
+    y = VC_0.5,
+    paired = F, 
+    var.equal = F, 
+    alternative = "two.sided"
+)
+
+dose_supp_1
+```
+
+* Is the p value less or equal to the Bonferroni adjusted p value? **`r dose_supp_1$p.value <= bonferroni`**.
+* Does the confidence interval contain 0? **`r min(dose_supp_1$conf.int) * max(dose_supp_1$conf.int) <= 0`**.
+
+### Orange juice, 1 miligram per day vs Ascorbic acid, 1 miligram per day
+
+```{r}
+OJ_1 <- ToothGrowth %>% filter(supp == "OJ", dose == 1) %>% select(len)
+VC_1 <- ToothGrowth %>% filter(supp == "VC", dose == 1) %>% select(len)
+
+dose_supp_2 <- t.test(
+    x = OJ_1, 
+    y = VC_1,
+    paired = F, 
+    var.equal = F, 
+    alternative = "two.sided"
+)
+
+dose_supp_2
+```
+
+* Is the p value less or equal to the Bonferroni adjusted p value? **`r dose_supp_2$p.value <= bonferroni`**.
+* Does the confidence interval contain 0? **`r min(dose_supp_2$conf.int) * max(dose_supp_2$conf.int) <= 0`**.
+
+
+### Orange juice, 2 miligrams per day vs Ascorbic acid, 2 miligrams per day
+
+```{r}
+OJ_2 <- ToothGrowth %>% filter(supp == "OJ", dose == 2) %>% select(len)
+VC_2 <- ToothGrowth %>% filter(supp == "VC", dose == 2) %>% select(len)
+
+dose_supp_3 <- t.test(
+    x = OJ_2, 
+    y = VC_2,
+    paired = F, 
+    var.equal = F, 
+    alternative = "two.sided"
+)
+
+dose_supp_3
+```
+
+* Is the p value less or equal to the Bonferroni adjusted p value? **`r dose_supp_3$p.value <= bonferroni`**.
+* Does the confidence interval contain 0? **`r min(dose_supp_3$conf.int) * max(dose_supp_3$conf.int) <= 0`**.
+
+## Conclusion
+
+There's a diference in tooth growth by
+
+There's no difference by supp.
+
+There's a difference by dose. Lower doses correspond to lower growth.
+
+No difference by supp at a dose equal to 2.
+
+# Appendix
